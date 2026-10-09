@@ -103,7 +103,61 @@ molt clara: primer definim el canal, després el missatge i finalment si és
 urgent, abans de cridar `build()` per obtenir la notificació llesta per
 enviar.
 
-## 3. Combinació amb el patró Factory
+## 3. El patró Factory
+
+El **Factory** és un patró de disseny creacional que encapsula la lògica de
+decidir **quina classe concreta instanciar**, de manera que el codi client
+només coneix una interfície o classe abstracta comuna i no depèn de les
+implementacions concretes.
+
+Al projecte trobem l'exemple a
+`src/factory/exemple/com/NotificacioFactory.java`:
+
+```java
+package factory.exemple.com;
+
+public class NotificacioFactory {
+
+    public static Notificacio crear(String tipus) {
+        if (tipus.equalsIgnoreCase("email")) {
+            return new NotificacioEmail();
+        } else if (tipus.equalsIgnoreCase("sms")) {
+            return new NotificacioSms();
+        } else {
+            throw new IllegalArgumentException("Tipus de notificació no suportat: " + tipus);
+        }
+    }
+}
+```
+
+El mètode estàtic `crear()` centralitza la decisió de quina implementació de
+`Notificacio` (`NotificacioEmail` o `NotificacioSms`) s'ha de retornar, en
+funció d'un paràmetre (`tipus`). El codi client només treballa amb la
+interfície `Notificacio`, sense preocupar-se de com es construeix cada
+variant.
+
+### 3.1. Quan fer servir el patró Factory
+
+- Quan tens un `if/else` o `switch` que decideix quina subclasse instanciar
+  en diversos punts del codi (com el `"email"`/`"sms"` de l'exemple).
+- Quan el client no hauria de conèixer les classes concretes, només la
+  interfície o classe abstracta comuna.
+- Quan vols centralitzar la lògica de creació perquè, si s'afegeix un tipus
+  nou, només calgui modificar un sol lloc (el Factory), en comptes de
+  cercar tots els `new` escampats pel codi.
+
+### 3.2. Senyals pràctics per detectar que cal un Factory
+
+1. **`new` escampat arreu del codi** amb lògica condicional repetida per
+   decidir quina classe instanciar.
+2. **Duplicació de la mateixa lògica de decisió** (el mateix `if/else` o
+   `switch`) en diversos llocs del projecte.
+3. Afegir un tipus nou obliga a tocar **molts fitxers diferents** en comptes
+   d'un de sol.
+4. El client necessita dependre únicament d'una interfície/abstracció, no
+   de les implementacions concretes.
+
+## 4. Combinació amb el patró Factory
 
 El projecte també mostra com combinar el Builder amb el patró **Factory**.
 La classe `NotificacioFactoryBuilder` (a
@@ -145,7 +199,29 @@ mentre que el **Builder** permet configurar la resta de propietats de forma
 flexible i llegible, sense necessitat de crear múltiples constructors o
 mètodes de fàbrica per a cada combinació possible d'opcions.
 
-## 4. Avantatges observats
+### 4.1. Quan combinar Factory i Builder
+
+Val la pena combinar-los quan, a més dels senyals del Factory (secció 3.2),
+cada objecte creat té:
+
+- Molts paràmetres opcionals o configurables (constructors amb 5+
+  paràmetres són un indici de *code smell*).
+- Necessitat de validar l'estat intermedi abans de construir l'objecte
+  final.
+- Interès en una API fluida (`.canal("sms").missatge(...).urgent(...).build()`)
+  un cop decidit el tipus.
+
+### 4.2. Senyals pràctics per detectar-ho
+
+1. El Factory ha de **triar el tipus I configurar-lo amb múltiples
+   opcions** alhora.
+2. Tens **constructors amb molts paràmetres o telescoping constructors**
+   per a cada variant creada pel Factory.
+3. Vols que el Factory retorni un `Builder` ja preconfigurat (per exemple,
+   amb el canal fixat) i deixar la resta de la configuració al codi client,
+   com fa `crearBuilderPerTipus`.
+
+## 5. Avantatges observats
 
 - **Llegibilitat:** el codi client expressa clarament quines propietats
   s'estan configurant, gràcies als noms dels mètodes encadenats.
